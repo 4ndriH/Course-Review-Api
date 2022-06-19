@@ -140,6 +140,11 @@ async def read_item(course_id, current_user: User = Depends(get_current_active_u
 async def read_item(nethz, current_user: User = Depends(get_current_active_user)):
     return getReviewsFromUser(nethz)
 
+# Get reviews of a course
+@app.get("/latest/")
+async def read_item(current_user: User = Depends(get_current_active_user)):
+    return getLatestReviews()
+
 
 # Delete a review
 @app.post("/remove")

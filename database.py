@@ -24,6 +24,12 @@ def getCourseReviews(CourseNumber):
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
 
+def getLatestReviews():
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("SELECT DISTINCT CourseNumber FROM CourseReviews ORDER BY Date DESC limit 10")
+    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
+    cnx.close()
+    return json.dumps((r[0] if data else None) if False else data)
 
 def removeCourseReviews(CourseNumber, nethz):
     cnx = sqlite3.connect(path)
