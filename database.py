@@ -34,7 +34,7 @@ def getLatestReviews():
     
 def getStatsReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber), COUNT(*) FROM CourseReviews WHERE Verified=1")
+    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE Verified=1")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
