@@ -35,7 +35,7 @@ jobs:
         uses: garygrossgarten/github-action-scp@release
         with:
           atomicPut: true    
-          local: app.py
+          local: database.py
           remote: ${{ secrets.TARGET_DIRECTORY }}/database.py
           host: ${{ secrets.VSOS_IP_ADDRESS }}
           username: ${{ secrets.USERNAME }}
