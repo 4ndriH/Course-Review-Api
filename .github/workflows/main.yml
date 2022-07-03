@@ -1,0 +1,22 @@
+name: GitHub Course-Review-Api
+
+on:
+  push:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the main branch on GitHub
+        uses: actions/checkout@v3
+        
+      - name: Move old app.py and database.py to a save place
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: mkdir --parents ${{ secrets.TARGET_DIRECTORY }}/oldVersions/$(date +%Y%m%d_%H%M%S) && mv ${{ secrets.TARGET_DIRECTORY }}/app.py$ && mv ${{ secrets.TARGET_DIRECTORY }}/database.py$
+          host: ${{ secrets.VSOS_IP_ADDRESS }}
+          username: ${{ secrets.USERNAME }}
+          privateKey: ${{ secrets.SSH_KEY }}
