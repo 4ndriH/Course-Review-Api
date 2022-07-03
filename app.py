@@ -9,10 +9,9 @@ from database import *
 from webHook import *
 
 # to get a string like this run: openssl rand -hex 32
-SECRET_KEY = ""
+SECRET_KEY = open("key.txt", "r").read().replace("\n", "")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1024
-
 
 # -----------------------------------------------------------
 # OAuth2 Setup
@@ -46,7 +45,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # Start the API
 # -----------------------------------------------------------
 
-app = FastAPI() #docs_url=None)
+app = FastAPI(docs_url=None)
 
 
 # -----------------------------------------------------------
@@ -125,8 +124,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 # Testing endpoint
 @app.get("/")
-async def home(current_user: User = Depends(get_current_active_user)):
-	return {"Playing with Duckies"}
+async def home(): #current_user: User = Depends(get_current_active_user)):
+	return {"Playing with": "Duckies"}
 
 
 # Get reviews of a course
@@ -140,15 +139,17 @@ async def read_item(course_id, current_user: User = Depends(get_current_active_u
 async def read_item(nethz, current_user: User = Depends(get_current_active_user)):
     return getReviewsFromUser(nethz)
 
-# Get reviews of a course
-@app.get("/latest/")
+
+@app.get("/latest")
 async def read_item(current_user: User = Depends(get_current_active_user)):
     return getLatestReviews()
 
-# Get reviews of a course
+
+# Get total number of reviews
 @app.get("/stats/")
 async def read_item(current_user: User = Depends(get_current_active_user)):
     return getStatsReviews()
+
 
 # Delete a review
 @app.post("/remove")
