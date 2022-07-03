@@ -3,12 +3,12 @@ import json
 import pandas as pd
 import time
 
-path = ''
+path = '/usr/games/RubberDucky/DB/RubberDucky.db'
 
 def getApiUser(username):
     temp_dict = {}
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM ApiUsers WHERE Username=? AND Deactivated=0", ('luggas',))
+    cursor = cnx.execute("SELECT * FROM ApiUsers WHERE Username=? AND Deactivated=0", (username,))
     userList = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     if len(userList) == 0:
@@ -24,14 +24,15 @@ def getCourseReviews(CourseNumber):
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
 
+
 def getLatestReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT DISTINCT CourseNumber FROM CourseReviews WHERE Verified=1 ORDER BY Date DESC limit 10")
+    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE Verified= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
-
     
+
 def getStatsReviews():
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE Verified=1")
