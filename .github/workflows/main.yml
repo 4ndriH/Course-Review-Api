@@ -36,7 +36,7 @@ jobs:
         with:
           atomicPut: true    
           local: app.py
-          remote: ${{ secrets.TARGET_DIRECTORY }}/app.py
+          remote: ${{ secrets.TARGET_DIRECTORY }}/database.py
           host: ${{ secrets.VSOS_IP_ADDRESS }}
           username: ${{ secrets.USERNAME }}
           privateKey: ${{ secrets.SSH_KEY }}
