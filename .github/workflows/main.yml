@@ -16,7 +16,17 @@ jobs:
       - name: Move old app.py and database.py to a save place
         uses: garygrossgarten/github-action-ssh@release
         with:
-          command: mkdir --parents ${{ secrets.TARGET_DIRECTORY }}/oldVersions/$(date +%Y%m%d_%H%M%S) && mv ${{ secrets.TARGET_DIRECTORY }}/app.py$ && mv ${{ secrets.TARGET_DIRECTORY }}/database.py$
+          command: sudo mkdir --parents ${{ secrets.TARGET_DIRECTORY }}/oldVersions/$(date +%Y%m%d_%H%M%S) && sudo mv ${{ secrets.TARGET_DIRECTORY }}/app.py $_ && sudo mv ${{ secrets.TARGET_DIRECTORY }}/database.py $_
+          host: ${{ secrets.VSOS_IP_ADDRESS }}
+          username: ${{ secrets.USERNAME }}
+          privateKey: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy app.py to server
+        uses: garygrossgarten/github-action-scp@release
+        with:
+          atomicPut: true    
+          local: app.py
+          remote: ${{ secrets.TARGET_DIRECTORY }}/app.py
           host: ${{ secrets.VSOS_IP_ADDRESS }}
           username: ${{ secrets.USERNAME }}
           privateKey: ${{ secrets.SSH_KEY }}
