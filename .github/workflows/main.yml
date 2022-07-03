@@ -2,7 +2,7 @@ name: GitHub Course-Review-Api
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
 
   workflow_dispatch:
 
