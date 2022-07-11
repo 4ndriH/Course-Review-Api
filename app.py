@@ -144,6 +144,11 @@ async def read_item(nethz, current_user: User = Depends(get_current_active_user)
 async def read_item(current_user: User = Depends(get_current_active_user)):
     return getLatestReviews()
 
+@app.get("/all")
+async def read_item(current_user: User = Depends(get_current_active_user)):
+    return getAllReviews()
+
+
 
 # Get total number of reviews
 @app.get("/stats/")
