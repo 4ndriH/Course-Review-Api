@@ -133,6 +133,11 @@ async def home(): #current_user: User = Depends(get_current_active_user)):
 async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
     return getCourseReviews(course_id)
 
+# Get reviews of a course
+@app.get("/rating/{course_id}")
+async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
+    return getRatingReviews(course_id)
+
 
 # Get all reviews a user has written
 @app.get("/user/{nethz}")
@@ -164,13 +169,13 @@ async def remove_data(course_id: str, nethz: str, current_user: User = Depends(g
 
 # Add a review
 @app.post("/insert")
-async def insert_data(course_id: str, nethz:str, review: str, current_user: User = Depends(get_current_active_user)):
+async def insert_data(course_id: str, nethz:str, review: str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return insertReview(course_id, nethz, review)
+    return insertReview(course_id, nethz, review, s1, s2, s3, s4, s5)
 
 
 # Update a review
 @app.post("/update")
-async def update_data(course_id: str, nethz:str, review: str, current_user: User = Depends(get_current_active_user)):
+async def update_data(course_id: str, nethz:str, review: str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return updateReview(course_id, nethz, review)
+    return updateReview(course_id, nethz, review, s1, s2, s3, s4, s5)
