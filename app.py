@@ -136,7 +136,7 @@ async def read_item(course_id, current_user: User = Depends(get_current_active_u
 # Get reviews of a course
 @app.get("/rating/{course_id}")
 async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
-    return getRatingReviews(course_id)
+    return getCourseRating(course_id)
 
 
 # Get all reviews a user has written
@@ -166,16 +166,30 @@ async def read_item(current_user: User = Depends(get_current_active_user)):
 async def remove_data(course_id: str, nethz: str, current_user: User = Depends(get_current_active_user)):
     return removeCourseReviews(course_id, nethz)
 
+# Delete a review
+@app.post("/removeRatings")
+async def remove_data(course_id: str, nethz: str, current_user: User = Depends(get_current_active_user)):
+    return removeCourseRatings(course_id, nethz)
+
 
 # Add a review
 @app.post("/insert")
-async def insert_data(course_id: str, nethz:str, review: str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
+async def insert_data(course_id: str, nethz:str, review: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return insertReview(course_id, nethz, review, s1, s2, s3, s4, s5)
+    return insertReview(course_id, nethz, review)
 
+# Add a rating
+@app.post("/insertRating")
+async def insert_data(course_id: str, nethz:str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
+    return insertRatings(course_id, nethz, s1, s2, s3, s4, s5)
 
 # Update a review
 @app.post("/update")
-async def update_data(course_id: str, nethz:str, review: str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
+async def update_data(course_id: str, nethz:str, review: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return updateReview(course_id, nethz, review, s1, s2, s3, s4, s5)
+    return updateReview(course_id, nethz, review)
+
+# Update a rating
+@app.post("/updateRating")
+async def update_data(course_id: str, nethz:str, s1:str, s2:str, s3:str, s4:str, s5:str, current_user: User = Depends(get_current_active_user)):
+    return updateRatings(course_id, nethz, s1, s2, s3, s4, s5)
