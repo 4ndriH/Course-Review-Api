@@ -1,172 +1,199 @@
-import sqlite3
-import json
-import pandas as pd
-import time
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends, FastAPI, HTTPException, status, Request
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from pydantic import BaseModel
+from typing import Union
+from database import *
+from webHook import *
 
-path = '/usr/games/CRAPI/CourseReview.db'
+# to get a string like this run: openssl rand -hex 32
+SECRET_KEY = open("key.txt", "r").read().replace("\n", "")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1024
 
 # -----------------------------------------------------------
-# User verification
+# OAuth2 Setup
 # -----------------------------------------------------------
 
-def getApiUser(username):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM ApiUsers WHERE Username=? AND Deactivated=0", (username,))
-    userList = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    if len(userList) == 0:
-        return {'Username': '', 'PasswordHash': '', 'Deactivated': 1}
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Union[str, None] = None
+
+
+class User(BaseModel):
+    username: str
+    email: Union[str, None] = None
+    full_name: Union[str, None] = None
+    disabled: Union[bool, None] = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# -----------------------------------------------------------
+# Start the API
+# -----------------------------------------------------------
+
+app = FastAPI() #FastAPI(docs_url=None)
+
+
+# -----------------------------------------------------------
+# OAuth2 Handling
+# -----------------------------------------------------------
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def authenticate_user(username: str, password: str):
+    user = getApiUser(username)
+    if not user:
+        return False
+    if not verify_password(password, user['PasswordHash']):
+        return False
+    return user
+
+
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
     else:
-        return userList[0]
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = getApiUser(username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user['Deactivated'] == 1:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user['Username']}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 # -----------------------------------------------------------
-# Get reviews and ratings of a course
+# API access points
 # -----------------------------------------------------------
 
-def getCourseReviews(course_id):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 ORDER BY Date DESC", (course_id,))
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
+# Testing endpoint
+@app.get("/")
+async def home(): #current_user: User = Depends(get_current_active_user)):
+	return {"Playing with": "Duckies"}
 
 
-def getCourseRating(CourseNumber):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources), FROM CourseRatings WHERE CourseNumber=?", (CourseNumber,))
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
+# Get reviews of a course
+@app.get("/course/{course_id}")
+async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
+    return getCourseReviews(course_id)
 
 
-# -----------------------------------------------------------
-# Get CourseReview website statistics
-# -----------------------------------------------------------
-
-def getLatestReviews():
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10")
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
+# Get ratings of a course
+@app.get("/rating/{course_id}")
+async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
+    return getCourseRating(course_id)
 
 
-def getPublishedReviewStats():
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE VerificationStatus=1")
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
+# Get all reviews a user has written
+@app.get("/user/{user_id}")
+async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
+    return getReviewsFromUser(user_id)
 
 
-def getAllCoursesWithReviews():
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus=1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date")
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
+@app.get("/latestReviews")
+async def read_item(current_user: User = Depends(get_current_active_user)):
+    return getLatestReviews()
 
 
-# -----------------------------------------------------------
-# Insert reviews or ratings of a course
-# -----------------------------------------------------------
-
-def insertReview(course_id, user_id, review):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
-    if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, Review, Date) VALUES (?, ?, ?, ?)", (user_id, course_id, review, int(time.time() * 1000),))
-        cnx.commit()
-        cnx.close()
-        return "inserted"
-    else:
-        return "You already submitted a review for this course"
+@app.get("/allReviews")
+async def read_item(current_user: User = Depends(get_current_active_user)):
+    return getAllCoursesWithReviews()
 
 
-def insertRating(course_id, user_id, column, rating):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
-    if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, (%s)) VALUES (?, ?, ?)" % (column), (user_id, course_id, rating,))
-        cnx.commit()
-        cnx.close()
-        return "success"
-    else:
-        return updateRating(course_id, user_id, column, rating)
+# Get total number of reviews
+@app.get("/stats")
+async def read_item(current_user: User = Depends(get_current_active_user)):
+    return getPublishedReviewStats()
 
 
-# -----------------------------------------------------------
-# Update reviews or ratings of a course
-# -----------------------------------------------------------
-
-def updateReview(course_id, user_id, review):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, VerificationStatus=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
-    cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
+# Delete a review
+@app.post("/removeReview")
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeCourseReview(course_id, user_id)
 
 
-def updateRating(course_id, user_id, column, rating):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=? WHERE CourseNumber=? AND UniqueUserId=?" % (column), (rating, CourseNumber, user_id,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
-    cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
+# Delete a Rating
+@app.post("/removeRating")
+async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeCourseRating(course_id, user_id, rating_id)
 
 
-# -----------------------------------------------------------
-# Remove reviews or ratings of a course
-# -----------------------------------------------------------
+# Add a review
+@app.post("/insertReview")
+async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return insertReview(course_id, user_id, review)
 
-def removeCourseReview(course_id, user_id):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("DELETE FROM CourseReviews WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
-    cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
-    
+# Add a rating
+@app.post("/insertRating")
+async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return insertRating(course_id, user_id, rating_id, rating)
 
-def removeCourseRating(course_id, user_id, column):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=NULL WHERE CourseNumber=? AND UniqueUserId=?" % (column), (course_id, user_id,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
-    cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
+# Update a review
+@app.post("/updateReview")
+async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return updateReview(course_id, user_id, review)
 
-
-# -----------------------------------------------------------
-# Reviews and rating submitted by user
-# -----------------------------------------------------------
-
-def getReviewsFromUser(user_id):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber, Review, Verified FROM CourseReviews WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
-    result = cursor.fetchall()
-    cnx.close()
-    return result
-
-
-def getStarRatingsFromUser(user_id):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseStarRatings WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
-    result = cursor.fetchall()
-    cnx.close()
-    return result
+# Update a rating
+@app.post("/updateRating")
+async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return updateRating(course_id, user_id, rating_id, rating)
