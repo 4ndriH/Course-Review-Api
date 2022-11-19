@@ -3,7 +3,11 @@ import json
 import pandas as pd
 import time
 
-path = '/usr/games/RubberDucky/DB/RubberDucky.db'
+path = '/CourseReview.db'
+
+# -----------------------------------------------------------
+# User verification
+# -----------------------------------------------------------
 
 def getApiUser(username):
     cnx = sqlite3.connect(path)
@@ -16,19 +20,29 @@ def getApiUser(username):
         return userList[0]
 
 
-def getCourseReviews(CourseNumber):
+# -----------------------------------------------------------
+# Get reviews and ratings of a course
+# -----------------------------------------------------------
+
+def getCourseReviews(course_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND Verified=1 ORDER BY Date DESC", (CourseNumber,))
+    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND Verified=1 ORDER BY Date DESC", (course_id,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
 
+
 def getCourseRating(CourseNumber):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT SUM(S1)/SUM(CASE WHEN S1 = 0 THEN 0 ELSE 1) as one, SUM(S2)/SUM(CASE WHEN S2 = 0 THEN 0 ELSE 1) as two, SUM(S3)/SUM(CASE WHEN S3 = 0 THEN 0 ELSE 1) as three, SUM(S4)/SUM(CASE WHEN S4 = 0 THEN 0 ELSE 1) as four, SUM(S5)/SUM(CASE WHEN S5 = 0 THEN 0 ELSE 1) as five, ((one + two + three + four + five) / (CASE WHEN one = 0 THEN 0 ELSE 1 + CASE WHEN two = 0 THEN 0 ELSE 1 + CASE WHEN three = 0 THEN 0 ELSE 1 + CASE WHEN four = 0 THEN 0 ELSE 1 + CASE WHEN five = 0 THEN 0 ELSE 1)) FROM CourseRatings WHERE CourseNumber=? ORDER BY Date DESC", (CourseNumber,))
+    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources), FROM CourseRatings WHERE CourseNumber=?", (CourseNumber,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
+
+
+# -----------------------------------------------------------
+# Get CourseReview website statistics
+# -----------------------------------------------------------
 
 def getLatestReviews():
     cnx = sqlite3.connect(path)
@@ -37,14 +51,8 @@ def getLatestReviews():
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
 
-def getAllReviews():
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE Verified= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date")
-    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
-    cnx.close()
-    return json.dumps((r[0] if data else None) if False else data)
 
-def getStatsReviews():
+def getPublishedReviewStats():
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE Verified=1")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
@@ -52,9 +60,77 @@ def getStatsReviews():
     return json.dumps((r[0] if data else None) if False else data)
 
 
-def removeCourseReviews(CourseNumber, nethz):
+def getAllCoursesWithReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("DELETE FROM CourseReviews WHERE CourseNumber=? AND nethz=?", (CourseNumber, nethz,))
+    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE Verified=1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date")
+    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
+    cnx.close()
+    return json.dumps((r[0] if data else None) if False else data)
+
+
+# -----------------------------------------------------------
+# Insert reviews or ratings of a course
+# -----------------------------------------------------------
+
+def insertReview(course_id, user_id, review):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
+    if len(cursor.fetchall()) == 0: 
+        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, Review, Date) VALUES (?, ?, ?, ?)", (user_id, course_id, review, int(time.time() * 1000),))
+        cnx.commit()
+        cnx.close()
+        return "inserted"
+    else:
+        return "You already submitted a review for this course"
+
+
+def insertRating(course_id, user_id, column, rating):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
+    if len(cursor.fetchall()) == 0: 
+        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, (%s)) VALUES (?, ?, ?)" % (column), (user_id, course_id, rating,))
+        cnx.commit()
+        cnx.close()
+        return "success"
+    else:
+        return updateRating(course_id, user_id, column, rating)
+
+
+# -----------------------------------------------------------
+# Update reviews or ratings of a course
+# -----------------------------------------------------------
+
+def updateReview(course_id, user_id, review):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, Verified=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
+    cnx.commit()
+    rowsAffected = cursor.rowcount
+    cnx.close()
+    if rowsAffected < 1:
+        return "fail"
+    else:
+        return "success"
+
+
+def updateRating(course_id, user_id, column, rating):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=? WHERE CourseNumber=? AND UniqueUserId=?" % (column), (rating, CourseNumber, user_id,))
+    cnx.commit()
+    rowsAffected = cursor.rowcount
+    cnx.close()
+    if rowsAffected < 1:
+        return "fail"
+    else:
+        return "success"
+
+
+# -----------------------------------------------------------
+# Remove reviews or ratings of a course
+# -----------------------------------------------------------
+
+def removeCourseReview(course_id, user_id):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("DELETE FROM CourseReviews WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -63,9 +139,10 @@ def removeCourseReviews(CourseNumber, nethz):
     else:
         return "success"
     
-def removeCourseRatings(CourseNumber, nethz):
+
+def removeCourseRating(course_id, user_id, column):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("DELETE FROM CourseRatings WHERE CourseNumber=? AND nethz=?", (CourseNumber, nethz,))
+    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=NULL WHERE CourseNumber=? AND UniqueUserId=?" % (column), (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -75,55 +152,21 @@ def removeCourseRatings(CourseNumber, nethz):
         return "success"
 
 
-def getReviewsFromUser(nethz):
+# -----------------------------------------------------------
+# Reviews and rating submitted by user
+# -----------------------------------------------------------
+
+def getReviewsFromUser(user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review, CourseNumber, Verified FROM CourseReviews WHERE nethz=? ORDER BY Date DESC", (nethz,))
+    cursor = cnx.execute("SELECT CourseNumber, Review, Verified FROM CourseReviews WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
     result = cursor.fetchall()
     cnx.close()
     return result
 
 
-def insertReview(course_id, nethz, review):
+def getStarRatingsFromUser(user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseReviews WHERE nethz=? AND CourseNumber=?", (nethz, course_id,))
-    if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseReviews (nethz, CourseNumber, Review, Date) VALUES (?, ?, ?, ?)", (nethz, course_id, review, int(time.time() * 1000),))
-        cnx.commit()
-        cnx.close()
-        return "inserted"
-    else:
-        return "User already submitted a review for this course"
-    
-def insertRatings(course_id, nethz, s1, s2, s3, s4, s5):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseRatings WHERE nethz=? AND CourseNumber=?", (nethz, course_id,))
-    if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseRatings (nethz, CourseNumber, Star1, Star2, Star3, Star4, Star5 Date) VALUES (?, ?, ?, ?, ?, ?, ?)", (nethz, course_id, s1, s2, s3, s4, s5, int(time.time() * 1000),))
-        cnx.commit()
-        cnx.close()
-        return "inserted"
-    else:
-        return "User already submitted a rating for this course"
-
-
-def updateReview(course_id, nethz, review, s1, s2, s3, s4, s5):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, Star1=?, Star2=?, Star3=?, Star4=?, Star5=?, Verified=0 WHERE CourseNumber=? AND nethz=?", (review, course_id, nethz, s1, s2, s3, s4, s5,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
+    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseStarRatings WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
+    result = cursor.fetchall()
     cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
-
-def updateRatings(course_id, nethz, review, s1, s2, s3, s4, s5):
-    cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, Star1=?, Star2=?, Star3=?, Star4=?, Star5=? WHERE CourseNumber=? AND nethz=?", (review, course_id, nethz, s1, s2, s3, s4, s5,))
-    cnx.commit()
-    rowsAffected = cursor.rowcount
-    cnx.close()
-    if rowsAffected < 1:
-        return "fail"
-    else:
-        return "success"
+    return result
