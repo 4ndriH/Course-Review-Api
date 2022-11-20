@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import time
 
-path = '/CourseReview.db'
+path = '/usr/games/CRAPI/CourseReview.db'
 
 # -----------------------------------------------------------
 # User verification
