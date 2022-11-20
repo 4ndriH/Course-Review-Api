@@ -88,7 +88,7 @@ def insertRating(course_id, user_id, column, rating):
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, (%s)) VALUES (?, ?, ?)" % (column), (user_id, course_id, rating,))
+        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, ?) VALUES (?, ?, ?)", (column, user_id, course_id, rating,))
         cnx.commit()
         cnx.close()
         return "success"
@@ -114,7 +114,7 @@ def updateReview(course_id, user_id, review):
 
 def updateRating(course_id, user_id, column, rating):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=? WHERE CourseNumber=? AND UniqueUserId=?" % (column), (rating, CourseNumber, user_id,))
+    cursor = cnx.execute("UPDATE CourseStarRatings SET ?=? WHERE CourseNumber=? AND UniqueUserId=?", (column, rating, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -142,7 +142,7 @@ def removeCourseReview(course_id, user_id):
 
 def removeCourseRating(course_id, user_id, column):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET (%s)=NULL WHERE CourseNumber=? AND UniqueUserId=?" % (column), (course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseStarRatings SET ?=NULL WHERE CourseNumber=? AND UniqueUserId=?", (column, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
