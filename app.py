@@ -183,7 +183,6 @@ async def insert_data(course_id: str, user_id: str, review: str, current_user: U
 # Add a rating
 @app.post("/insertRating")
 async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    sendHook()
     return insertRating(course_id, user_id, rating_id, rating)
 
 # Update a review
@@ -195,5 +194,4 @@ async def update_data(course_id: str, user_id: str, review: str, current_user: U
 # Update a rating
 @app.post("/updateRating")
 async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    sendHook()
     return updateRating(course_id, user_id, rating_id, rating)
