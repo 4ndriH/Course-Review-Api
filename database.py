@@ -26,7 +26,7 @@ def getApiUser(username):
 
 def getCourseReviews(course_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND Verified=1 ORDER BY Date DESC", (course_id,))
+    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 ORDER BY Date DESC", (course_id,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -34,7 +34,7 @@ def getCourseReviews(course_id):
 
 def getCourseRating(CourseNumber):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources), FROM CourseRatings WHERE CourseNumber=?", (CourseNumber,))
+    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources) FROM CourseStarRatings WHERE CourseNumber=?", (CourseNumber,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -46,7 +46,7 @@ def getCourseRating(CourseNumber):
 
 def getLatestReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE Verified= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10")
+    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -54,7 +54,7 @@ def getLatestReviews():
 
 def getPublishedReviewStats():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE Verified=1")
+    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews WHERE VerificationStatus=1")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -62,7 +62,7 @@ def getPublishedReviewStats():
 
 def getAllCoursesWithReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE Verified=1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date")
+    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus=1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -86,9 +86,9 @@ def insertReview(course_id, user_id, review):
 
 def insertRating(course_id, user_id, column, rating):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
+    cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, ?) VALUES (?, ?, ?)", (column, user_id, course_id, rating,))
+        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, {0}) VALUES (?, ?, ?)".format(column), (user_id, course_id, rating,))
         cnx.commit()
         cnx.close()
         return "success"
@@ -102,7 +102,7 @@ def insertRating(course_id, user_id, column, rating):
 
 def updateReview(course_id, user_id, review):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, Verified=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, VerificationStatus=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -114,7 +114,7 @@ def updateReview(course_id, user_id, review):
 
 def updateRating(course_id, user_id, column, rating):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET ?=? WHERE CourseNumber=? AND UniqueUserId=?", (column, rating, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseStarRatings SET {0}=? WHERE CourseNumber=? AND UniqueUserId=?".format(column), (rating, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -142,7 +142,7 @@ def removeCourseReview(course_id, user_id):
 
 def removeCourseRating(course_id, user_id, column):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET ?=NULL WHERE CourseNumber=? AND UniqueUserId=?", (column, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseStarRatings SET {0}=NULL WHERE CourseNumber=? AND UniqueUserId=?".format(column), (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -158,7 +158,7 @@ def removeCourseRating(course_id, user_id, column):
 
 def getReviewsFromUser(user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber, Review, Verified FROM CourseReviews WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
+    cursor = cnx.execute("SELECT CourseNumber, Review, VerificationStatus FROM CourseReviews WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
     result = cursor.fetchall()
     cnx.close()
     return result
