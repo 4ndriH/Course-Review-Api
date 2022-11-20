@@ -141,10 +141,13 @@ async def read_item(course_id, current_user: User = Depends(get_current_active_u
 
 
 # Get all reviews a user has written
-@app.get("/user/{user_id}")
+@app.get("/userReview/{user_id}")
 async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
     return getReviewsFromUser(user_id)
 
+@app.get("/userRating/{user_id}")
+async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
+    return getStarRatingsFromUser(user_id)
 
 @app.get("/latestReviews")
 async def read_item(current_user: User = Depends(get_current_active_user)):
