@@ -166,7 +166,7 @@ def getReviewsFromUser(user_id):
 
 def getStarRatingsFromUser(user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseStarRatings WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
+    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseStarRatings WHERE UniqueUserId=?", (user_id,))
     result = cursor.fetchall()
     cnx.close()
     return result
