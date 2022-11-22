@@ -45,7 +45,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # Start the API
 # -----------------------------------------------------------
 
-app = FastAPI() #FastAPI(docs_url=None)
+#app = FastAPI() 
+app = FastAPI(docs_url=None)
 
 
 # -----------------------------------------------------------
