@@ -8,6 +8,7 @@ from typing import Union
 from database import *
 from webHook import *
 
+
 # to get a string like this run: openssl rand -hex 32
 SECRET_KEY = open("key.txt", "r").read().replace("\n", "")
 ALGORITHM = "HS256"
@@ -42,11 +43,34 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # -----------------------------------------------------------
-# Start the API
+# API setup
 # -----------------------------------------------------------
 
-#app = FastAPI() 
-app = FastAPI(docs_url=None)
+tags_metadata = [
+    {
+        "name": "RubberDucky",
+        "description": "Testing endpoint"
+    },
+    {
+        "name": "CR Home",
+        "description": "Information displayed on the CourseReview Homepage."
+    
+    },
+    {
+        "name": "CR Course",
+        "description": "Request course information."
+    },
+    {
+        "name": "CR User",
+        "description": "Restricted access points as they are user specific."
+    },
+]
+
+app = FastAPI(
+    title="CourseReview API",
+    version="2.0.0",
+    openapi_tags=tags_metadata
+    ) 
 
 
 # -----------------------------------------------------------
@@ -103,7 +127,87 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     return current_user
 
 
-@app.post("/token", response_model=Token)
+# -----------------------------------------------------------
+# API access points
+# -----------------------------------------------------------
+
+# Testing endpoint
+@app.get("/", tags=["RubberDucky"])
+async def home():
+	return {"Playing with": "Duckies"}
+
+
+# CR Home endpoints
+@app.get("/latestReviews", tags=["CR Home"])
+async def read_item():
+    return getLatestReviews()
+
+
+@app.get("/allReviews", tags=["CR Home"])
+async def read_item():
+    return getAllCoursesWithReviews()
+
+
+@app.get("/stats", tags=["CR Home"])
+async def read_item():
+    return getPublishedReviewStats()
+
+
+# CR Course endpoints
+@app.get("/course/{course_id}", tags=["CR Course"])
+async def read_item(course_id):
+    return getCourseReviews(course_id)
+
+
+@app.get("/rating/{course_id}", tags=["CR Course"])
+async def read_item(course_id):
+    return getCourseRating(course_id)
+
+
+# CR User endpoints
+@app.get("/userReview/{user_id}", tags=["CR User"])
+async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
+    return getReviewsFromUser(user_id)
+
+
+@app.get("/userRating/{user_id}", tags=["CR User"])
+async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
+    return getStarRatingsFromUser(user_id)
+
+
+@app.post("/insertReview", tags=["CR User"])
+async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return insertReview(course_id, user_id, review)
+
+
+@app.post("/updateReview", tags=["CR User"])
+async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+    sendHook()
+    return updateReview(course_id, user_id, review)
+
+
+@app.post("/removeReview", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeCourseReview(course_id, user_id)
+
+
+@app.post("/insertRating", tags=["CR User"])
+async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
+    return insertRating(course_id, user_id, rating_id, rating)
+
+
+@app.post("/updateRating", tags=["CR User"])
+async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
+    return updateRating(course_id, user_id, rating_id, rating)
+
+
+@app.post("/removeRating", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeCourseRating(course_id, user_id, rating_id)
+
+
+@app.post("/token", response_model=Token, tags=["CR Authentication"])
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
@@ -117,85 +221,3 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": user['Username']}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-# -----------------------------------------------------------
-# API access points
-# -----------------------------------------------------------
-
-# Testing endpoint
-@app.get("/")
-async def home(): #current_user: User = Depends(get_current_active_user)):
-	return {"Playing with": "Duckies"}
-
-
-# Get reviews of a course
-@app.get("/course/{course_id}")
-async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
-    return getCourseReviews(course_id)
-
-
-# Get ratings of a course
-@app.get("/rating/{course_id}")
-async def read_item(course_id, current_user: User = Depends(get_current_active_user)):
-    return getCourseRating(course_id)
-
-
-# Get all reviews a user has written
-@app.get("/userReview/{user_id}")
-async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getReviewsFromUser(user_id)
-
-@app.get("/userRating/{user_id}")
-async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getStarRatingsFromUser(user_id)
-
-@app.get("/latestReviews")
-async def read_item(current_user: User = Depends(get_current_active_user)):
-    return getLatestReviews()
-
-
-@app.get("/allReviews")
-async def read_item(current_user: User = Depends(get_current_active_user)):
-    return getAllCoursesWithReviews()
-
-
-# Get total number of reviews
-@app.get("/stats")
-async def read_item(current_user: User = Depends(get_current_active_user)):
-    return getPublishedReviewStats()
-
-
-# Delete a review
-@app.post("/removeReview")
-async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
-    return removeCourseReview(course_id, user_id)
-
-
-# Delete a Rating
-@app.post("/removeRating")
-async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
-    return removeCourseRating(course_id, user_id, rating_id)
-
-
-# Add a review
-@app.post("/insertReview")
-async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
-    sendHook()
-    return insertReview(course_id, user_id, review)
-
-# Add a rating
-@app.post("/insertRating")
-async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    return insertRating(course_id, user_id, rating_id, rating)
-
-# Update a review
-@app.post("/updateReview")
-async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
-    sendHook()
-    return updateReview(course_id, user_id, review)
-
-# Update a rating
-@app.post("/updateRating")
-async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    return updateRating(course_id, user_id, rating_id, rating)
