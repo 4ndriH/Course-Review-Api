@@ -46,7 +46,7 @@ def getCourseRating(CourseNumber):
 
 def getLatestReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10")
+    cursor = cnx.execute("SELECT c.CourseNumber, CourseName FROM (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC limit 10) cn INNER JOIN Courses c ON cn.CourseNumber = c.CourseNumber")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
