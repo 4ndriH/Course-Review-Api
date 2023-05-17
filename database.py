@@ -54,7 +54,7 @@ def getLatestReviews():
 
 def getPublishedReviewStats():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM CourseReviews AS cr FULL JOIN CourseStarRatings as csr ON cr.CourseNumber = csr.CourseNumber AND cr.UniqueUserId = csr.UniqueUserId WHERE VerificationStatus=1")
+    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM (SELECT CourseNumber, UniqueUserId FROM CourseReviews WHERE VerificationStatus = 1 UNION SELECT CourseNumber, UniqueUserId FROM CourseStarRatings)")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -62,7 +62,7 @@ def getPublishedReviewStats():
 
 def getAllCoursesWithReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT c.CourseNumber, CourseName FROM (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus = 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC UNION ALL SELECT CourseNumber FROM CourseStarRatings WHERE NOT IN (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus=1)) cn INNER JOIN Courses c ON cn.CourseNumber = c.CourseNumber")
+    cursor = cnx.execute("SELECT c.CourseNumber, CourseName FROM (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC) cn INNER JOIN Courses c ON cn.CourseNumber = c.CourseNumber")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
