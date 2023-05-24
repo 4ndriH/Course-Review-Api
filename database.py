@@ -72,11 +72,11 @@ def getAllCoursesWithReviews():
 # Insert reviews or ratings of a course
 # -----------------------------------------------------------
 
-def insertReview(course_id, user_id, review):
+def insertReview(course_id, user_id, review, semester):
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, Review, Date) VALUES (?, ?, ?, ?)", (user_id, course_id, review, int(time.time() * 1000),))
+        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, Semester, Review, Date) VALUES (?, ?, ?, ?, ?)", (user_id, course_id, review, semester, int(time.time() * 1000),))
         cnx.commit()
         cnx.close()
         return "inserted"
@@ -100,9 +100,20 @@ def insertRating(course_id, user_id, column, rating):
 # Update reviews or ratings of a course
 # -----------------------------------------------------------
 
-def updateReview(course_id, user_id, review):
+def updateReview(course_id, user_id, review, semester):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, VerificationStatus=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, SET Semester=? VerificationStatus=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, semester, course_id, user_id,))
+    cnx.commit()
+    rowsAffected = cursor.rowcount
+    cnx.close()
+    if rowsAffected < 1:
+        return "fail"
+    else:
+        return "success"
+
+def updateSemester(course_id, user_id, semester):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("UPDATE CourseReviews SET Semester=? WHERE CourseNumber=? AND UniqueUserId=?", (semester, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()

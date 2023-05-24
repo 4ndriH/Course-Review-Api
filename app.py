@@ -186,16 +186,19 @@ async def read_item(user_id, current_user: User = Depends(get_current_active_use
 
 
 @app.post("/insertReview", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+async def insert_data(course_id: str, user_id: str, review: str, semester: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return insertReview(course_id, user_id, review)
+    return insertReview(course_id, user_id, review, semester)
 
 
 @app.post("/updateReview", tags=["CR User"])
-async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+async def update_data(course_id: str, user_id: str, review: str, semester: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return updateReview(course_id, user_id, review)
+    return updateReview(course_id, user_id, review, semester)
 
+@app.post("/updateSemester", tags=["CR User"])
+async def update_data(course_id: str, user_id: str, semester: str, current_user: User = Depends(get_current_active_user)):
+    return updateSemester(course_id, user_id, semester)
 
 @app.post("/removeReview", tags=["CR User"])
 async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
