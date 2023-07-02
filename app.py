@@ -175,14 +175,9 @@ async def read_item(course_id):
 
 
 # CR User endpoints
-@app.get("/userReview/{user_id}", tags=["CR User"])
+@app.get("/userStuff/{user_id}", tags=["CR User"])
 async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getReviewsFromUser(user_id)
-
-
-@app.get("/userRating/{user_id}", tags=["CR User"])
-async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getStarRatingsFromUser(user_id)
+    return getThingsFromUser(user_id)
 
 
 @app.post("/insertReview", tags=["CR User"])
@@ -215,6 +210,16 @@ async def update_data(course_id: str, user_id: str, rating_id: str, rating: int,
 @app.post("/removeRating", tags=["CR User"])
 async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
     return removeCourseRating(course_id, user_id, rating_id)
+
+
+@app.post("/updateSemester", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, semester: str, current_user: User = Depends(get_current_active_user)):
+    return updateSemester(course_id, user_id, semester)
+
+
+@app.post("/removeSemester", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeSemester(course_id, user_id)
 
 
 @app.post("/token", response_model=Token, tags=["CR Authentication"])
