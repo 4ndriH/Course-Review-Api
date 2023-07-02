@@ -217,6 +217,11 @@ async def remove_data(course_id: str, user_id: str, semester: str, current_user:
     return updateSemester(course_id, user_id, semester)
 
 
+@app.post("/removeSemester", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
+    return removeSemester(course_id, user_id)
+
+
 @app.post("/token", response_model=Token, tags=["CR Authentication"])
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
