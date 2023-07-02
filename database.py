@@ -126,7 +126,7 @@ def updateRating(course_id, user_id, column, rating):
 
 def updateSemester(course_id, user_id, semester):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Semester=?, WHERE CourseNumber=? AND UniqueUserId=?", (semester, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Semester=? WHERE CourseNumber=? AND UniqueUserId=?", (semester, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -136,12 +136,12 @@ def updateSemester(course_id, user_id, semester):
         return "success"
 
 # -----------------------------------------------------------
-# Remove reviews or ratings of a course
+# Remove reviews ratings or semester of a course
 # -----------------------------------------------------------
 
 def removeCourseReview(course_id, user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=NULL WHERE CourseNumber=? AND UniqueUserId=?", ("", course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=NULL WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -161,6 +161,18 @@ def removeCourseRating(course_id, user_id, column):
         return "fail"
     else:
         return "success"
+    
+
+def removeSemester(course_id, user_id):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("UPDATE CourseReviews SET Semester=NULL WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
+    cnx.commit()
+    rowsAffected = cursor.rowcount
+    cnx.close()
+    if rowsAffected < 1:
+        return "fail"
+    else:
+        return "success"
 
 
 # -----------------------------------------------------------
@@ -170,6 +182,6 @@ def removeCourseRating(course_id, user_id, column):
 def getThingsFromUser(user_id):
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT CourseNumber, Review, VerificationStatus, Semester, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseReviews WHERE UniqueUserId=? ORDER BY Date DESC", (user_id,))
-    result = cursor.fetchall()
+    data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
-    return result
+    return json.dumps((r[0] if data else None) if False else data)
