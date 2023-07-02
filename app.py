@@ -186,9 +186,9 @@ async def read_item(user_id, current_user: User = Depends(get_current_active_use
 
 
 @app.post("/insertReview", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, review: str, semester: str, current_user: User = Depends(get_current_active_user)):
+async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return insertReview(course_id, user_id, review, semester)
+    return insertReview(course_id, user_id, review)
 
 
 @app.post("/updateReview", tags=["CR User"])
@@ -203,8 +203,8 @@ async def remove_data(course_id: str, user_id: str, current_user: User = Depends
 
 
 @app.post("/insertRating", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, semester: str, current_user: User = Depends(get_current_active_user)):
-    return insertRating(course_id, user_id, rating_id, rating, semester)
+async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
+    return insertRating(course_id, user_id, rating_id, rating)
 
 
 @app.post("/updateRating", tags=["CR User"])
