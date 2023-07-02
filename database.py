@@ -26,7 +26,7 @@ def getApiUser(username):
 
 def getCourseReviews(course_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 ORDER BY Date DESC", (course_id,))
+    cursor = cnx.execute("SELECT Review, Semester FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 ORDER BY Date DESC", (course_id,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -34,7 +34,7 @@ def getCourseReviews(course_id):
 
 def getCourseRating(CourseNumber):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources) FROM CourseStarRatings WHERE CourseNumber=?", (CourseNumber,))
+    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources), Semester FROM CourseStarRatings WHERE CourseNumber=?", (CourseNumber,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -72,11 +72,11 @@ def getAllCoursesWithReviews():
 # Insert reviews or ratings of a course
 # -----------------------------------------------------------
 
-def insertReview(course_id, user_id, review):
+def insertReview(course_id, user_id, review, semester):
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, Review, Date) VALUES (?, ?, ?, ?)", (user_id, course_id, review, int(time.time() * 1000),))
+        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, VerificationStatus, Date, Review, Semester) VALUES (?, ?, 0, ?, ?, ?)", (user_id, course_id, review, int(time.time() * 1000), semester,))
         cnx.commit()
         cnx.close()
         return "inserted"
@@ -84,11 +84,11 @@ def insertReview(course_id, user_id, review):
         return "You already submitted a review for this course"
 
 
-def insertRating(course_id, user_id, column, rating):
+def insertRating(course_id, user_id, column, rating, semester):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT * FROM CourseStarRatings WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id))
+    cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=? AND {0} IS NOT NULL".format(column), (user_id, course_id))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseStarRatings (UniqueUserId, CourseNumber, {0}) VALUES (?, ?, ?)".format(column), (user_id, course_id, rating,))
+        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, {0}, Semester) VALUES (?, ?, ?, ?)".format(column), (user_id, course_id, rating, semester,))
         cnx.commit()
         cnx.close()
         return "success"
@@ -97,12 +97,12 @@ def insertRating(course_id, user_id, column, rating):
 
 
 # -----------------------------------------------------------
-# Update reviews or ratings of a course
+# Update reviews, ratings or semester of a course
 # -----------------------------------------------------------
 
 def updateReview(course_id, user_id, review):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, VerificationStatus=0 WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=?, VerificationStatus=0, Date=? WHERE CourseNumber=? AND UniqueUserId=?", (review, course_id, user_id, int(time.time() * 1000),))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -114,7 +114,19 @@ def updateReview(course_id, user_id, review):
 
 def updateRating(course_id, user_id, column, rating):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET {0}=? WHERE CourseNumber=? AND UniqueUserId=?".format(column), (rating, course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET {0}=? WHERE CourseNumber=? AND UniqueUserId=?".format(column), (rating, course_id, user_id,))
+    cnx.commit()
+    rowsAffected = cursor.rowcount
+    cnx.close()
+    if rowsAffected < 1:
+        return "fail"
+    else:
+        return "success"
+    
+
+def updateSemester(course_id, user_id, semester):
+    cnx = sqlite3.connect(path)
+    cursor = cnx.execute("UPDATE CourseReviews SET Semester=?, WHERE CourseNumber=? AND UniqueUserId=?", (semester, course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -123,14 +135,13 @@ def updateRating(course_id, user_id, column, rating):
     else:
         return "success"
 
-
 # -----------------------------------------------------------
 # Remove reviews or ratings of a course
 # -----------------------------------------------------------
 
 def removeCourseReview(course_id, user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("DELETE FROM CourseReviews WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=NULL WHERE CourseNumber=? AND UniqueUserId=?", ("", course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -142,7 +153,7 @@ def removeCourseReview(course_id, user_id):
 
 def removeCourseRating(course_id, user_id, column):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseStarRatings SET {0}=NULL WHERE CourseNumber=? AND UniqueUserId=?".format(column), (course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET {0}=NULL WHERE CourseNumber=? AND UniqueUserId=?".format(column), (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
@@ -166,7 +177,7 @@ def getReviewsFromUser(user_id):
 
 def getStarRatingsFromUser(user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseStarRatings WHERE UniqueUserId=?", (user_id,))
+    cursor = cnx.execute("SELECT CourseNumber, Recommended, Interesting, Difficulty, Effort, Resources FROM CourseReviews WHERE UniqueUserId=?", (user_id,))
     result = cursor.fetchall()
     cnx.close()
     return result
