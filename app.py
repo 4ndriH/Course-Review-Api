@@ -186,9 +186,9 @@ async def read_item(user_id, current_user: User = Depends(get_current_active_use
 
 
 @app.post("/insertReview", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
+async def insert_data(course_id: str, user_id: str, review: str, semester: str, current_user: User = Depends(get_current_active_user)):
     sendHook()
-    return insertReview(course_id, user_id, review)
+    return insertReview(course_id, user_id, review, semester)
 
 
 @app.post("/updateReview", tags=["CR User"])
@@ -203,8 +203,8 @@ async def remove_data(course_id: str, user_id: str, current_user: User = Depends
 
 
 @app.post("/insertRating", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    return insertRating(course_id, user_id, rating_id, rating)
+async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, semester: str, current_user: User = Depends(get_current_active_user)):
+    return insertRating(course_id, user_id, rating_id, rating, semester)
 
 
 @app.post("/updateRating", tags=["CR User"])
@@ -215,6 +215,11 @@ async def update_data(course_id: str, user_id: str, rating_id: str, rating: int,
 @app.post("/removeRating", tags=["CR User"])
 async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
     return removeCourseRating(course_id, user_id, rating_id)
+
+
+@app.post("/updateSemester", tags=["CR User"])
+async def remove_data(course_id: str, user_id: str, semester: str, current_user: User = Depends(get_current_active_user)):
+    return updateSemester(course_id, user_id, semester)
 
 
 @app.post("/token", response_model=Token, tags=["CR Authentication"])
