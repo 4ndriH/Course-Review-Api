@@ -175,14 +175,9 @@ async def read_item(course_id):
 
 
 # CR User endpoints
-@app.get("/userReview/{user_id}", tags=["CR User"])
+@app.get("/userStuff/{user_id}", tags=["CR User"])
 async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getReviewsFromUser(user_id)
-
-
-@app.get("/userRating/{user_id}", tags=["CR User"])
-async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getStarRatingsFromUser(user_id)
+    return getThingsFromUser(user_id)
 
 
 @app.post("/insertReview", tags=["CR User"])
