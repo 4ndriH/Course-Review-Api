@@ -76,7 +76,7 @@ def insertReview(course_id, user_id, review):
     cnx = sqlite3.connect(path)
     cursor = cnx.execute("SELECT * FROM CourseReviews WHERE UniqueUserId=? AND CourseNumber=?", (user_id, course_id,))
     if len(cursor.fetchall()) == 0: 
-        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, VerificationStatus, Date, Review) VALUES (?, ?, 0, ?, ?)", (user_id, course_id, review, int(time.time() * 1000),))
+        cursor = cnx.execute("INSERT INTO CourseReviews (UniqueUserId, CourseNumber, VerificationStatus, Date, Review) VALUES (?, ?, 0, ?, ?)", (user_id, course_id, int(time.time() * 1000), review,))
         cnx.commit()
         cnx.close()
         return "inserted"
