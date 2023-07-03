@@ -141,7 +141,7 @@ def updateSemester(course_id, user_id, semester):
 
 def removeCourseReview(course_id, user_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("UPDATE CourseReviews SET Review=NULL WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
+    cursor = cnx.execute("UPDATE CourseReviews SET Review=NULL, VerificationStatus=NULL WHERE CourseNumber=? AND UniqueUserId=?", (course_id, user_id,))
     cnx.commit()
     rowsAffected = cursor.rowcount
     cnx.close()
