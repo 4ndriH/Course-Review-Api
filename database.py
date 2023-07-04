@@ -26,7 +26,7 @@ def getApiUser(username):
 
 def getCourseReviews(course_id):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT Review, Semester FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 ORDER BY Date DESC", (course_id,))
+    cursor = cnx.execute("SELECT Review, Semester FROM CourseReviews WHERE CourseNumber=? AND VerificationStatus=1 AND CourseNumber != '00-000-00X' ORDER BY Date DESC", (course_id,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -34,7 +34,7 @@ def getCourseReviews(course_id):
 
 def getCourseRating(CourseNumber):
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources) FROM CourseReviews WHERE CourseNumber=?", (CourseNumber,))
+    cursor = cnx.execute("SELECT AVG(Recommended), AVG(Interesting), AVG(Difficulty), AVG(Effort), AVG(Resources) FROM CourseReviews WHERE CourseNumber=? AND CourseNumber != '00-000-00X'", (CourseNumber,))
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -54,7 +54,7 @@ def getLatestReviews():
 
 def getPublishedReviewStats():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM (SELECT * FROM CourseReviews WHERE Review IS NOT NULL AND VerificationStatus=1 OR Recommended IS NOT NULL)")
+    cursor = cnx.execute("SELECT COUNT(DISTINCT CourseNumber) AS percourse, COUNT(*) AS total FROM (SELECT * FROM CourseReviews WHERE (Review IS NOT NULL AND VerificationStatus=1 OR Recommended IS NOT NULL) AND CourseNumber != '00-000-00X')")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
@@ -62,7 +62,7 @@ def getPublishedReviewStats():
 
 def getAllCoursesWithReviews():
     cnx = sqlite3.connect(path)
-    cursor = cnx.execute("SELECT c.CourseNumber, CourseName FROM (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 GROUP BY CourseNumber HAVING MAX(Date) ORDER BY Date DESC) cn INNER JOIN Courses c ON cn.CourseNumber = c.CourseNumber")
+    cursor = cnx.execute("SELECT c.CourseNumber, CourseName FROM (SELECT CourseNumber FROM CourseReviews WHERE VerificationStatus= 1 AND CourseNumber != '00-000-00X' GROUP BY CourseNumber ORDER BY Date DESC) cn INNER JOIN Courses c ON cn.CourseNumber = c.CourseNumber")
     data = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
     cnx.close()
     return json.dumps((r[0] if data else None) if False else data)
