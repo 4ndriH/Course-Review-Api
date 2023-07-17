@@ -4,10 +4,10 @@ import expectedResults as expRes
 import sys
 
 access_token = ''
-url = 'https://rubberducky.vsos.ethz.ch:1855/'
-rdd = '&RDD=@jmWveQtmf9a2v9JC-7fXCQj'
-username = 'MT6o3ZRdHkzCm3FX'
-password = 'xje@tuf6fge.wqh.QMA'
+url = ''
+rdd = ''
+username = ''
+password = ''
 offset = 20
 successCnt = 0
 verificationURLs = ['https://rubberducky.vsos.ethz.ch:1855/course/00-010-00X?' + rdd, 'https://rubberducky.vsos.ethz.ch:1855/rating/00-020-00X?' + rdd]
