@@ -42,7 +42,7 @@ jobs:
       - name: Start the testing API
         uses: garygrossgarten/github-action-ssh@release
         with:
-          command: sudo systemctl start CRapi_test
+          command: sudo systemctl start CRapi_test; sqlite3 ${{ secrets.TARGET_DIRECTORY }}/CourseReview_test.db 'DELETE FROM CourseReviews WHERE UniqueUserId="labrat@ethz.ch"'
           host: ${{ secrets.VSOS_IP_ADDRESS }}
           username: ${{ secrets.USERNAME }}
           privateKey: ${{ secrets.SSH_KEY }}
