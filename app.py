@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from typing import Union
-import webHook
+from webHook import *
 try:
-    import database
+    from database import *
 except:
-    import database_test as database
+    from database_test import *
 
 
 # to get a string like this run: openssl rand -hex 32
