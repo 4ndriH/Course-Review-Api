@@ -3,14 +3,20 @@ from fastapi import Depends, FastAPI, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from typing import Union
 from webHook import *
+import os
 try:
     from database import *
 except:
     from database_test import *
+
+
+load_dotenv() 
+rdd_test = os.environ.get("RDD_TEST")
 
 
 # to get a string like this run: openssl rand -hex 32
@@ -152,77 +158,81 @@ async def home():
 
 # CR Home endpoints
 @app.get("/latestReviews", tags=["CR Home"])
-async def read_item():
-    return getLatestReviews()
+async def read_item(RDD: Union[str, None] = None):
+    return getLatestReviews((RDD == rdd_test))
 
 
 @app.get("/allReviews", tags=["CR Home"])
-async def read_item():
-    return getAllCoursesWithReviews()
+async def read_item(RDD: Union[str, None] = None):
+    return getAllCoursesWithReviews((RDD == rdd_test))
 
 
 @app.get("/stats", tags=["CR Home"])
-async def read_item():
-    return getPublishedReviewStats()
+async def read_item(RDD: Union[str, None] = None):
+    return getPublishedReviewStats((RDD == rdd_test))
 
 
 # CR Course endpoints
 @app.get("/course/{course_id}", tags=["CR Course"])
-async def read_item(course_id):
-    return getCourseReviews(course_id)
+async def read_item(course_id: str, RDD: Union[str, None] = None):
+    return getCourseReviews(course_id, (RDD == rdd_test))
 
 
 @app.get("/rating/{course_id}", tags=["CR Course"])
-async def read_item(course_id):
-    return getCourseRating(course_id)
+async def read_item(course_id: str, RDD: Union[str, None] = None):
+    return getCourseRating(course_id, (RDD == rdd_test))
 
 
 # CR User endpoints
 @app.get("/userStuff/{user_id}", tags=["CR User"])
-async def read_item(user_id, current_user: User = Depends(get_current_active_user)):
-    return getThingsFromUser(user_id)
+async def read_item(user_id: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return getThingsFromUser(user_id, (RDD == rdd_test))
 
 
 @app.post("/insertReview", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
-    sendHook()
-    return insertReview(course_id, user_id, review)
+async def insert_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    rdd_bool = RDD == rdd_test
+    if not rdd_bool:
+        sendHook()
+    return insertReview(course_id, user_id, review, rdd_bool)
 
 
 @app.post("/updateReview", tags=["CR User"])
-async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user)):
-    sendHook()
-    return updateReview(course_id, user_id, review)
+async def update_data(course_id: str, user_id: str, review: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    rdd_bool = RDD == rdd_test
+    if not rdd_bool:
+        sendHook()
+    return updateReview(course_id, user_id, review, rdd_bool)
 
 
 @app.post("/removeReview", tags=["CR User"])
-async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
-    return removeCourseReview(course_id, user_id)
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return removeCourseReview(course_id, user_id, (RDD == rdd_test))
 
 
 @app.post("/insertRating", tags=["CR User"])
-async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    return insertRating(course_id, user_id, rating_id, rating)
+async def insert_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return insertRating(course_id, user_id, rating_id, rating, (RDD == rdd_test))
 
 
 @app.post("/updateRating", tags=["CR User"])
-async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user)):
-    return updateRating(course_id, user_id, rating_id, rating)
+async def update_data(course_id: str, user_id: str, rating_id: str, rating: int, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return updateRating(course_id, user_id, rating_id, rating, (RDD == rdd_test))
 
 
 @app.post("/removeRating", tags=["CR User"])
-async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user)):
-    return removeCourseRating(course_id, user_id, rating_id)
+async def remove_data(course_id: str, user_id: str, rating_id: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return removeCourseRating(course_id, user_id, rating_id, (RDD == rdd_test))
 
 
 @app.post("/updateSemester", tags=["CR User"])
-async def remove_data(course_id: str, user_id: str, semester: str, current_user: User = Depends(get_current_active_user)):
-    return updateSemester(course_id, user_id, semester)
+async def remove_data(course_id: str, user_id: str, semester: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return updateSemester(course_id, user_id, semester, (RDD == rdd_test))
 
 
 @app.post("/removeSemester", tags=["CR User"])
-async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user)):
-    return removeSemester(course_id, user_id)
+async def remove_data(course_id: str, user_id: str, current_user: User = Depends(get_current_active_user), RDD: Union[str, None] = None):
+    return removeSemester(course_id, user_id, (RDD == rdd_test))
 
 
 @app.post("/token", response_model=Token, tags=["CR Authentication"])
