@@ -13,6 +13,7 @@ on:
 
 jobs:
   build:
+    name: Course-Review-Api Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the main branch on GitHub
