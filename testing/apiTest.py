@@ -1,16 +1,17 @@
 import requests
 import json
 import expectedResults as expRes
+import os
 import sys
 
 access_token = ''
-url = ''
-rdd = ''
-username = ''
-password = ''
+url = os.environ['TESTING_URL']
+rdd = os.environ['RDD']
+username = os.environ['USERNAME']
+password = os.environ['PASSWORD']
 offset = 20
 successCnt = 0
-verificationURLs = ['https://rubberducky.vsos.ethz.ch:1855/course/00-010-00X?' + rdd, 'https://rubberducky.vsos.ethz.ch:1855/rating/00-020-00X?' + rdd]
+verificationURLs = [url + 'course/00-010-00X?' + rdd, url + 'rating/00-020-00X?' + rdd]
 sys.tracebacklimit = 0
 
 # ----------------------------------------
@@ -171,6 +172,7 @@ apiGetRequest(courseTest, endpoint='course', weirdUrlExtension='/00-000-00X')
 apiGetRequest(ratingTest, endpoint='rating', weirdUrlExtension='/00-000-00X')
 apiGetRequest(userStuffTest, endpoint='userStuff', weirdUrlExtension='/dummy%40ethz.ch')
 apiPostRequest(insertReviewTest, endpoint='insertReview', parameters='course_id=00-010-00X&user_id=labrat%40ethz.ch&review=beep%20boop')
+apiPostRequest(insertReviewTest, endpoint='insertReview', parameters='course_id=00-010-00X&user_id=labrat%40ethz.ch&review=beep%20boop')
 apiPostRequestRating(insertRatingTest, ['Recommended', 'Interesting', 'Difficulty', 'Effort', 'Resources'], [1, 2, 3, 4, 5], endpoint='insertRating', parameters='course_id=00-020-00X&user_id=labrat%40ethz.ch&')
 apiPostRequest(updateReviewTest, endpoint='insertReview', parameters='course_id=00-010-00X&user_id=labrat%40ethz.ch&review=updoot')
 apiPostRequest(updateRatingTest, endpoint='insertRating', parameters='course_id=00-020-00X&user_id=labrat%40ethz.ch&rating_id=Recommended&rating=2')
@@ -178,6 +180,7 @@ apiPostRequest(insertSemesterTest, endpoint='updateSemester', parameters='course
 apiPostRequest(removeSemesterTest, endpoint='removeSemester', parameters='course_id=00-010-00X&user_id=labrat%40ethz.ch')
 apiPostRequest(removeReviewTest, endpoint='removeReview', parameters='course_id=00-010-00X&user_id=labrat%40ethz.ch')
 apiPostRequest(removeRatingTest, endpoint='removeRating', parameters='course_id=00-020-00X&user_id=labrat%40ethz.ch&rating_id=Recommended')
+
 
 if successCnt < 16:
     raise Exception(str(successCnt) + '/16 tests passed!')
